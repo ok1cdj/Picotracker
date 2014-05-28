@@ -15,4 +15,6 @@ http://hamshop.cz/hab-a-aprs-c34/
 
 ![Image of tracker](https://raw.githubusercontent.com/ok1cdj/picotracker/master/img/tracker.jpg)
 
+**Be careful, voltage over 1.8 V can damage GPS module. Install power supply first, and measure voltage at output.**
+
 
