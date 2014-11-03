@@ -1,11 +1,15 @@
 /*
-Picotracker 3.1 SW
+Picotracker 3.2 SW
 ATMEGA 328p@4MHz and 1.8V
-RFM22 430 MHz beacon CW and RTTY packet  
+RFM22 430 MHz beacon CW and RTTY packet compatible with  
 NMEA rate 2 Hz
 
 by OM2AMR and OK1CDJ
 parts from AVA code by M0UPU
+
+Changes:
+GPS power safe mode when gps_sat >5 and max. pref. <5
+
 
 */
 
@@ -20,11 +24,11 @@ parts from AVA code by M0UPU
 
 #define GPS_BAUDRATE  9600
 #define RTTY_PERIOD   1000UL
-//#define DEBUG_RESET  // AVR reset
+#define DEBUG_RESET  // AVR reset
 #define DEBUG_RTTY //RTTY packet dump
 #define DEBUG_CW   // CW packet dump
-#define RADIO_FREQUENCY 437.690  
-#define RADIO_POWER  0x06
+#define RADIO_FREQUENCY 434.690  
+#define RADIO_POWER  0x05
 /*
  0x02  5db (3mW)
  0x03  8db (6mW)
@@ -68,7 +72,7 @@ unsigned int sentence_counter;
 float battvolt=0;
 float tempin=0;
 unsigned long rtty_next_tx_millis;
-
+int firstlock = 0;
 
 
 
@@ -134,7 +138,7 @@ void setup()
   wait(500);
   
   //doplnit reset radia po 20 vetach !
-  morse("DE OK1KZE BALLOON TRACKER");
+  morse("DE OK1CDJ BALLOON TRACKER");
   wait(1000);
 
   radio1.write(0x07, 0x08); // turn tx on
@@ -145,9 +149,6 @@ void setup()
 #endif
   
   
-
- 
-
   rtty_next_tx_millis = millis() + 2000;
 
   
@@ -188,18 +189,23 @@ void loop()
    
   }
 
-
-
- 
-
   while (Serial.available()) {
     cc = Serial.read();
     gps_decode(cc);
    //Serial.print("X") ;
-                  
+   // power save GPS
+    if(firstlock == 0 && gps_sat > 5){
+          setupGPSpower();
+          firstlock = 1;
+          //Serial.print("GPS power save") ;
+      }    
+    if(firstlock == 1 && gps_sat < 5){
+          setGps_MaxPerformanceMode();
+          firstlock = 0;
+          //Serial.print("GPS Max performance") ;
+      }
   }
-           
- 
+            
   power_save();
 }
 
@@ -277,11 +283,6 @@ void rtty_txstring (char * string)
   
 }
  
- 
-
- 
-
- 
 uint16_t gps_CRC16_checksum (char *string)
 {
   size_t i;
@@ -327,9 +328,9 @@ void rtty_send() {
 //<O TEMPERATURE CAMERA C D.DD>,<O BAROMETRIC PRESSURE hPa(millibars)>,<O CUSTOM DATA>*<CHECKSUM><NEWLINE> 
    pkt_num++;
 
-   strcpy(datastring,"$$$$Seed2,"); //CALLSIGN
+   strcpy(datastring,"$$$$CDJ-1,"); //CALLSIGN
    
-   strcpy(datastring2,"OK1KZE ");
+   strcpy(datastring2,"OK1CDJ ");
    
    //sprintf(temp1,"%u",millis()/1000); //packet number
    sprintf(temp1,"%u",pkt_num); 
@@ -342,7 +343,7 @@ void rtty_send() {
    
    snprintf(temp1, 3, "%s", h_str);
    strcat(datastring, temp1);
-   strcat(datastring2,temp1); // hodidny do cw message
+   strcat(datastring2,temp1); // hodiny do cw message
    
    strcat(datastring, ":");
    snprintf(temp1, 3, "%s", m_str);
@@ -380,10 +381,10 @@ void rtty_send() {
    strcat(datastring, ",");
    snprintf(temp1, 3, "%02d", (int)gps_sat);
    strcat(datastring,temp1);
+   strcat(datastring, ",");
+   snprintf(temp1, 3, "%02d", (int)firstlock);
    //strcat(datastring, ",OM2AMR");
-   
-  
-  
+   strcat(datastring,temp1);
   
   unsigned int CHECKSUM = gps_CRC16_checksum(datastring);  // Calculates the checksum for this datastring
   char checksum_str[6];
@@ -433,13 +434,6 @@ void rtty_send() {
    
   
   #ifdef DEBUG_CW
-  //Serial.println(gps_lat);
-  //Serial.println(gps_lat2);
-  //Serial.println(gps_lon);
-  //Serial.println(gps_lon2);
-  //Serial.println(lat1);
-  //Serial.println(lon1);
-  //Serial.println(loc);
   Serial.println(datastring2);
   #endif
   
@@ -451,13 +445,6 @@ void rtty_send() {
     radio1.write(0x07, 0x80); // radio soft reset
     wait(500);
     setupRADIO();
-    // upravit - lokator z premennej, alt z premennej
-   
-    //strcpy(datastring,"OK1OMX");
-    //snprintf(temp1, 6, "%05ld", (long)(gps_altitude + 0.5));
-    //strcat(datastring2,temp1); 
-    //Serial.println(datastring2);
-    //send cw message
     morse(datastring2);
     wait(1000);
     radio1.write(0x07, 0x08); // turn tx on
@@ -511,9 +498,15 @@ void setupGPS() {
   morse("V");
   
   //turn off GSV
+   
   
-  
-  
+}
+
+void setupGPSpower() {
+  //Set GPS ot Power Save Mode
+  uint8_t setPSM[] = { 0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92 }; // Setup for Power Save Mode (Default Cyclic 1s)
+ 
+  sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
 void wait(unsigned long delaytime) // Arduino Delay doesn't get CPU Speeds below 8Mhz
@@ -523,16 +516,6 @@ void wait(unsigned long delaytime) // Arduino Delay doesn't get CPU Speeds below
   }
 }
 
-
-
-
-
-
-
-
-
-
-  
 
 
 void setGPS_GSVoff()

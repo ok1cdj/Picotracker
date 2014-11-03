@@ -7474,8 +7474,8 @@ Source: http://www.molex.com/pdm_docs/sd/877580616_sd.pdf</description>
 <part name="C2" library="resistor" deviceset="C-EU" device="C0805" value="10uF"/>
 <part name="GND12" library="SparkFun" deviceset="GND" device=""/>
 <part name="JP1" library="SparkFun" deviceset="M02" device="PTH" value="Battery"/>
-<part name="R6" library="resistor" deviceset="R-EU_" device="R0603" value="820k"/>
-<part name="R8" library="resistor" deviceset="R-EU_" device="R0603" value="430k"/>
+<part name="R6" library="resistor" deviceset="R-EU_" device="R0603" value="430k"/>
+<part name="R8" library="resistor" deviceset="R-EU_" device="R0603" value="820k"/>
 <part name="Q2" library="ava" deviceset="ABRACON_ABM3_CRYSTAL" device="ABM03_HC49" value="4 MHz"/>
 <part name="C4" library="resistor" deviceset="C-EU" device="C0603" value="16p"/>
 <part name="C5" library="resistor" deviceset="C-EU" device="C0603" value="16p"/>
